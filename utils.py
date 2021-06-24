@@ -1,3 +1,5 @@
+import re
+
 def user_response_multi(message, choices):
 	for i, choice in enumerate(choices):
 		print(f'{i+1}. {choice}')
