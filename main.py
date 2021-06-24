@@ -28,8 +28,7 @@ from utils import load_packages_from_requirements#, user_response_multi, user_re
 
 # TODO : Add a mode on file/folder creation/last update if no git repo ?
 
-
-EXTRACT_DATE_REGEX = re.compile(r'(\d*)\s(?=\d+\))')
+EXTRACT_DATE_REGEX = re.compile(r'Date:\s*(\d+)')
 LETTER_REGEX = re.compile(r'[a-zA-Z]')
 
 parser = argparse.ArgumentParser("Python Requirements Version Guesser")
@@ -62,58 +61,6 @@ def get_pypi_history(package_name, ignore_release_candidat=True):
 	return sorted(versions, key=lambda x:x[1], reverse=True)
 
 
-def get_pypi_history_rss(package_name, ignore_release_candidat=True):
-	"""
-	Retrieve version release dates
-	Some releases don't comprises release date when queried via the JSON api.
-	We retrieve the version history via the RSS feed
-	"""
-
-	resp = requests.get(f"https://pypi.org/rss/project/{package_name}/releases.xml")
-
-	# FIXME : This is vulnerable to xml exploits. In theory a malicious user could insert a malicious payload into pypi description and get RCE on people using this package...
-	root_node = parse_xml(resp.text)
-
-	items = root_node[0].findall('item')
-	if len(items) == 0:
-		raise Exception(f"[ERROR] Couldn't retrieve versions for package {package_name} from Pypi")
-
-	versions = []
-
-	for item in items:
-		attributes = item.getchildren()
-		version = attributes[0].text
-		if 'rc' in version and ignore_release_candidat:
-			continue
-		
-		release_date = datetime.strptime(attributes[-1].text, '%a, %d %b %Y %H:%M:%S %Z')
-		versions.append((version, release_date))
-
-	# FIXME : Do we really need to sort ? Versions should already be sorted
-	return sorted(versions, key=lambda x:x[1], reverse=True)
-
-
-
-def get_date_added_to_requirements(package_name, requirements_filepath='requirements.txt'):
-	# NOTE : Must be in the git directory for this to work. Change directory before ?
-	cmd = f"git blame -L'/{package_name}/',+1 --date unix {requirements_filepath} 2>/dev/null"
-
-	try:
-		blame_out = subprocess.check_output(cmd, shell=True).decode()
-	except:
-		blame_out = ""
-
-	if len(blame_out) > 0:
-		matches = EXTRACT_DATE_REGEX.search(blame_out)
-
-		if matches:
-			date = datetime.fromtimestamp(int(matches.group(0)))
-
-			return date
-	
-	raise Exception(f"[ERROR] Couldn't git blame {package_name} on {requirements_filepath}")
-
-
 def find_version_at_date(available_versions, date):
 	last_version = available_versions[0][0]
 
@@ -128,6 +75,46 @@ def find_version_at_date(available_versions, date):
 	return last_version
 
 
+def get_date_when_package_added(package_name, via_requirements=False):
+	if not via_requirements:
+		search_pattern = f"^import {package_name}$|^from {package_name}"
+		filename = ""
+	else:
+		search_pattern = f"{package_name}$"
+		filename = "requirements.txt"
+
+	# We grep for 'date' | '+ search pattern' so that we keep only commits that insert lines (+)
+	cmd = f"git log -G '{search_pattern}' --date unix -p {filename} | grep -i 'date\\|\\+.*{package_name}'"
+
+	try:
+		blame_out = subprocess.check_output(cmd, shell=True).decode().strip()
+	except:
+		blame_out = ""
+
+	if len(blame_out) == 0:
+		#return []
+		raise Exception(f"[ERROR] couldn't find package '{package_name}' via git-log")
+
+	# Remove commit that are not directly followed by '+ import' (We grepped for this in cmd)
+	# This is ugly.. TODO: figure out a better way in the grep command 
+	dates = []
+	got_plus = False
+	for line in blame_out.split('\n')[::-1]:
+		if line[0] == "+":
+			got_plus = True
+		elif got_plus:
+			got_plus = False
+
+			matches = EXTRACT_DATE_REGEX.search(line)
+			if matches:
+				dates.append(datetime.fromtimestamp(int(matches.group(1))))
+			else:
+				raise Exception("[ERROR] while parsing git-log")
+
+	# Get first date where the line was added
+	return sorted(dates, reverse=True)[0]
+
+
 if __name__ == "__main__":
 
 	packages_in_requirements = load_packages_from_requirements('requirements.txt')
@@ -136,7 +123,7 @@ if __name__ == "__main__":
 
 	for package_name, version in packages_in_requirements.items():
 		if version is None:
-			date_added = get_date_added_to_requirements(package_name)
+			date_added = get_date_when_package_added(package_name, via_requirements=True)
 			available_versions = get_pypi_history(package_name, ignore_release_candidat=True)
 			version = find_version_at_date(available_versions, date_added)
 			print(f"{package_name} - {date_added}")
