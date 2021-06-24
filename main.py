@@ -141,30 +141,7 @@ def get_date_when_package_committed(package_name, via_requirements=False, latest
     return sorted(dates, reverse=not latest_addition)[0]
 
 
-if __name__ == "__main__":
-    print("="*60)
-    print("Python requirements guesser")
-    print("="*60)
-
-    print("\nFollow the steps to guess package versions based on when they were added to git\n")
-
-
-    stdlib_list, from_import_to_package_mapping, from_package_to_import_mapping = get_mapping_files_from_pipreqs()
-
-    local_packages = get_python_filename_at_root()
-    # Remove local_packages from the list of imports
-    stdlib_list.update(local_packages)
-
-    all_imported_packages = set(get_all_imports(stdlib_list))
-    packages_in_requirements_version_map = load_packages_from_requirements('requirements.txt')
-    packages_in_requirements = set(packages_in_requirements_version_map.keys())
-
-    extra_packages = all_imported_packages - packages_in_requirements
-
-    all_packages = packages_in_requirements_version_map
-    for extra_package in extra_packages:
-        all_packages[extra_package] = None
-
+def guess_package_versions(package_list, from_import_to_package_mapping, from_package_to_import_mapping, packages_in_requirements):
     packages = []
     for package_name, version in all_packages.items():
         if version is None:
@@ -186,7 +163,7 @@ if __name__ == "__main__":
 
             date_added_via_import = get_date_when_package_committed(import_name, via_requirements=False)
             if date_added_via_import is None:
-                print(f"[INFO] Package '{package_name}' is defined in requirements.txt but not used (Or comitted), ignoring")
+                print(f"[INFO] Package '{package_name}' is defined in requirements.txt but not used (Or committed), ignoring")
                 continue
             date_added_via_import_str = date_added_via_import.strftime("%Y-%m-%d")
             import_version = find_version_at_date(available_versions, date_added_via_import)
@@ -226,6 +203,41 @@ if __name__ == "__main__":
 
         packages.append((package_name, version))
 
+    return packages
+
+
+if __name__ == "__main__":
+    print("="*60)
+    print("Python requirements guesser")
+    print("="*60)
+
+    print("\nFollow the steps to guess package versions based on when they were added to git\n")
+
+    # Retrive mapping files from https://github.com/bndr/pipreqs
+    stdlib_list, from_import_to_package_mapping, from_package_to_import_mapping = get_mapping_files_from_pipreqs()
+
+    # Get local packages
+    local_packages = get_python_filename_at_root()
+
+    # Remove local_packages from the list of imports
+    stdlib_list.update(local_packages)
+
+    # Retrieve all imported packages in project
+    all_imported_packages = set(get_all_imports(stdlib_list))
+
+    # Retrieve packages in requirements.txt
+    packages_in_requirements_version_map = load_packages_from_requirements('requirements.txt')
+    packages_in_requirements = set(packages_in_requirements_version_map.keys())
+
+
+    # Merge packages in requirements.txt and imports
+    all_packages = packages_in_requirements_version_map
+    extra_packages = all_imported_packages - packages_in_requirements
+    for extra_package in extra_packages:
+        all_packages[extra_package] = None
+
+    # Interactive guessing of packages versions
+    packages = guess_package_versions(all_packages, from_import_to_package_mapping, from_package_to_import_mapping, packages_in_requirements)
 
     print("")
     # TODO : Write to requirements.txt

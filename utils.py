@@ -21,8 +21,6 @@ def user_response_multi_choices(message, choices):
 
 
 def user_response_yes_no(message):
-
-
     resp = input(message + ' [Y/n]\n').lower()
 
     if resp not in ['y', 'n']:
