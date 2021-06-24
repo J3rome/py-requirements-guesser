@@ -1,5 +1,7 @@
 import re
 import os
+import subprocess
+from datetime import datetime
 from urllib.request import urlretrieve
 
 def user_response_multi_choices(message, choices):
@@ -106,6 +108,15 @@ def load_packages_from_requirements(filepath):
 
 def get_python_filename_at_root():
     return [f[:-3] for f in os.listdir('.') if os.path.isfile(f) and f.endswith('.py')]
+
+
+def get_date_last_modified_python_file():
+    timestamp = subprocess.check_output('git log -n 1 --all --pretty="format:%ct" -- "*.py"', shell=True).decode()
+
+    if len(timestamp) == 0:
+        return None
+    else:
+        return datetime.fromtimestamp(int(timestamp))
 
 
 def detect_os():
