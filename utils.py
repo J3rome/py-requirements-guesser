@@ -99,7 +99,7 @@ def load_packages_from_requirements(filepath):
         else:
             version = None
 
-        packages[splitted[0]] = version
+        packages[splitted[0].lower()] = version
 
     return packages
 

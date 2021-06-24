@@ -24,7 +24,7 @@ from utils import get_date_last_modified_python_file, get_python_filename_at_roo
 
 # FIXME : Some unused imports might be important (Pillow for example)
 
-EXTRACT_DATE_REGEX = re.compile(r'Date:\s*(\d+)')
+EXTRACT_DATE_REGEX = re.compile(r'date\s-\s(\d+)')
 LETTER_REGEX = re.compile(r'[a-zA-Z]')
 
 parser = argparse.ArgumentParser("Python Requirements Version Guesser")
@@ -104,7 +104,7 @@ def get_date_when_package_committed(package_name, via_requirements=False, latest
         filename = "requirements.txt"
 
     # We grep for 'date' | '+ search pattern' so that we keep only commits that insert lines (+)
-    cmd = f"git log -G '{search_pattern}' --date unix -p {filename} | grep -i '^date:\\|\\+.*{package_name}'"
+    cmd = f"git log -i -G '{search_pattern}' --pretty='format:date - %at' --date unix -p {filename} | grep -i '^date - \\|\\+.*{package_name}'"
 
     try:
         blame_out = subprocess.check_output(cmd, shell=True).decode().strip()
@@ -145,22 +145,19 @@ def guess_package_versions(package_list, from_import_to_package_mapping, from_pa
     packages = []
     for package_name, version in all_packages.items():
         if version is None:
-            # TODO : Add argument to select one of the options by default
-            skip_choice = False
+            choice = None
+            # Pypi package to import mapping
+            import_name = from_package_to_import_mapping.get(package_name, package_name)
+            pypi_package_name = from_import_to_package_mapping.get(package_name, package_name)
 
-            import_name = package_name
-
-            if import_name in from_package_to_import_mapping:
-                import_name = from_package_to_import_mapping[import_name]
-            
-            if package_name in from_import_to_package_mapping:
-                package_name = from_import_to_package_mapping[package_name]
-
-            available_versions = get_pypi_history(package_name, ignore_release_candidat=True)
+            # Get available versions from Pypi
+            available_versions = get_pypi_history(pypi_package_name, ignore_release_candidat=True)
 
             if available_versions is None:
+                print(f"[INFO] Couldn't find Pypi releases for package '{package_name}'")
                 continue
 
+            # Retrieve candidate version based on the first time the package was imported in *.py
             date_added_via_import = get_date_when_package_committed(import_name, via_requirements=False)
             if date_added_via_import is None:
                 print(f"[INFO] Package '{package_name}' is defined in requirements.txt but not used (Or committed), ignoring")
@@ -168,34 +165,33 @@ def guess_package_versions(package_list, from_import_to_package_mapping, from_pa
             date_added_via_import_str = date_added_via_import.strftime("%Y-%m-%d")
             import_version = find_version_at_date(available_versions, date_added_via_import)
 
-            if package_name in packages_in_requirements:
-                date_added_via_req = get_date_when_package_committed(package_name, via_requirements=True)
+            # Retrieve candidate version based on the first time the package was added to requirements.txt
+            if pypi_package_name.lower() in packages_in_requirements:
+                date_added_via_req = get_date_when_package_committed(pypi_package_name, via_requirements=True)
                 if date_added_via_req is not None:
                     req_version = find_version_at_date(available_versions, date_added_via_req)
                     date_added_via_req_str = date_added_via_req.strftime("%Y-%m-%d")
                 else:
-                    choice = 1
-                    skip_choice = True
                     print(f"[INFO] Package '{package_name}' was not in requirements.txt, using date of first import (Version {import_version} / {date_added_via_import_str})")
-
-                if not skip_choice and req_version == import_version:
-                    print(f"[INFO] Package '{package_name}' was attributed version {req_version}")
-                    skip_choice = True
                     choice = 1
 
-                if not skip_choice:
-                    choice = user_response_multi_choices(f"Choose guessing strategy for package '{package_name}'", [
-                        f'{"First time the package was imported".ljust(50)} (Version {import_version} / {date_added_via_import_str})', 
-                        f'{"When the package was added to requirements.txt".ljust(50)} (Version {req_version} / {date_added_via_req_str})'
-                    ])
-
-                if choice == 2:
-                    version = req_version
-                else:
-                    version = import_version
-
+                if choice is None:
+                    if req_version != import_version:
+                        # Ask user to choose version based on either first import date or first added to requirements.txt date
+                        choice = user_response_multi_choices(f"Choose guessing strategy for package '{package_name}'", [
+                            f'{"First time the package was imported".ljust(50)} (Version {import_version} / {date_added_via_import_str})', 
+                            f'{"When the package was added to requirements.txt".ljust(50)} (Version {req_version} / {date_added_via_req_str})'
+                        ])
+                    else:
+                        print(f"[INFO] Package '{package_name}' was attributed version {req_version}")
+                        choice = 1
             else:
                 print(f"[INFO] Package '{package_name}' was not found in requirements.txt, using date of first import (Version {import_version} / {date_added_via_import_str})")
+                choice = 1
+
+            if choice == 2:
+                version = req_version
+            else:
                 version = import_version
 
         else:
