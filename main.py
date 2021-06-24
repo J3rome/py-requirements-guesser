@@ -7,15 +7,15 @@ from xml.etree.ElementTree import fromstring as parse_xml
 
 import requests
 
-from utils import load_packages_from_requirements, get_mapping_files_from_pipreqs, user_response_multi_choices, user_response_yes_no, get_python_filename_at_root
+from utils import load_packages_from_requirements, get_mapping_files_from_pipreqs, user_response_multi_choices
+from utils import get_date_last_modified_python_file, get_python_filename_at_root
 
 # TODO : Propose choice between date of first import or Added in requirements
-# TODO :    Other choices : When project was created, last commit (That wasnt on md file), 75 percentile of time between commits
+# TODO :    Other choices : When project was created, last commit (That wasnt on md file) get_date_last_modified_python_file()
 
 # TODO : Pin also the dependencies tree of the packages Ex : Torch package might install numpy, etc
 
 # TODO : Poetry mode ?
-#           - There might be a version in the history (1st Commit : matplotlib==1.0.1 -> 2nd commit : matplotlib==1.1.2 -> 3rd commit : )
 
 # TODO : Add a mode where file/folder creation/last update is used if no git repo ?
 
@@ -169,7 +169,7 @@ if __name__ == "__main__":
     packages = []
     for package_name, version in all_packages.items():
         if version is None:
-            # TODO : Add argument to auto select one of the options
+            # TODO : Add argument to select one of the options by default
             skip_choice = False
 
             import_name = package_name
@@ -187,7 +187,7 @@ if __name__ == "__main__":
 
             date_added_via_import = get_date_when_package_added(import_name, via_requirements=False)
             if date_added_via_import is None:
-                print(f"[INFO] Package '{package_name}' is defined in requirements.txt but not used, ignoring")
+                print(f"[INFO] Package '{package_name}' is defined in requirements.txt but not used (Or comitted), ignoring")
                 continue
             date_added_via_import_str = date_added_via_import.strftime("%Y-%m-%d")
             import_version = find_version_at_date(available_versions, date_added_via_import)
@@ -219,12 +219,11 @@ if __name__ == "__main__":
                     version = import_version
 
             else:
-                #print(f"[INFO] Package '{package_name} version is already specified in requirements.txt ({version})")
-                print(f"[INFO] Package {package_name} was not found in requirements.txt, using date of first import (Version {import_version} / {date_added_via_import_str})")
+                print(f"[INFO] Package '{package_name}' was not found in requirements.txt, using date of first import (Version {import_version} / {date_added_via_import_str})")
                 version = import_version
 
         else:
-            print(f"{package_name} version is specified in requirements.txt ({version})")
+            print(f"[INFO] Package '{package_name}' version is specified in requirements.txt ({version})")
 
         packages.append((package_name, version))
 
