@@ -3,7 +3,6 @@ import os
 import argparse
 import subprocess
 from datetime import datetime
-from xml.etree.ElementTree import fromstring as parse_xml
 
 import requests
 
@@ -96,7 +95,7 @@ def get_all_imports(stdlib_list=None):
     return imports
 
 
-def get_date_when_package_added(package_name, via_requirements=False, latest_addition=False):
+def get_date_when_package_committed(package_name, via_requirements=False, latest_addition=False):
     if not via_requirements:
         search_pattern = f"^import {package_name}|^from {package_name}"
         filename = ""
@@ -185,7 +184,7 @@ if __name__ == "__main__":
             if available_versions is None:
                 continue
 
-            date_added_via_import = get_date_when_package_added(import_name, via_requirements=False)
+            date_added_via_import = get_date_when_package_committed(import_name, via_requirements=False)
             if date_added_via_import is None:
                 print(f"[INFO] Package '{package_name}' is defined in requirements.txt but not used (Or comitted), ignoring")
                 continue
@@ -193,7 +192,7 @@ if __name__ == "__main__":
             import_version = find_version_at_date(available_versions, date_added_via_import)
 
             if package_name in packages_in_requirements:
-                date_added_via_req = get_date_when_package_added(package_name, via_requirements=True)
+                date_added_via_req = get_date_when_package_committed(package_name, via_requirements=True)
                 if date_added_via_req is not None:
                     req_version = find_version_at_date(available_versions, date_added_via_req)
                     date_added_via_req_str = date_added_via_req.strftime("%Y-%m-%d")
