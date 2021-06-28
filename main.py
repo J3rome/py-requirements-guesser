@@ -7,7 +7,7 @@ from datetime import datetime
 from urllib.request import urlopen
 
 from utils import load_packages_from_requirements, get_mapping_files_from_pipreqs, user_response_multi_choices
-from utils import get_date_last_modified_python_file, get_local_modules, validate_cwd_is_git_repo
+from utils import get_date_last_modified_python_file, get_local_modules, validate_cwd_is_git_repo, user_response_yes_no
 
 # TODO : Propose choice between date of first import or Added in requirements
 # TODO :    Other choices : When project was created, last commit (That wasnt on md file) get_date_last_modified_python_file()
@@ -286,10 +286,12 @@ if __name__ == "__main__":
 
         print(f"Writing requirements to file {args.write}")
 
-        if os.path.exist(args.write) and \
+        if os.path.exists(args.write) and \
             not user_response_yes_no(f"File {args.write} already exist, are you sure you want to overwrite it ?"):
                 exit(0)
 
+        with open(args.write, 'w') as f:
+            f.write(new_requirements_txt)
         # TODO : Write to args.write
 
 
