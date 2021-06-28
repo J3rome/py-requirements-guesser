@@ -9,20 +9,13 @@ from urllib.request import urlopen
 from utils import load_packages_from_requirements, get_mapping_files_from_pipreqs, user_response_multi_choices
 from utils import get_date_last_modified_python_file, get_local_modules, validate_cwd_is_git_repo, user_response_yes_no
 
-# TODO : Propose choice between date of first import or Added in requirements
-# TODO :    Other choices : When project was created, last commit (That wasnt on md file) get_date_last_modified_python_file()
-
 # TODO : Pin also the dependencies tree of the packages Ex : Torch package might install numpy, etc
-
-# TODO : Poetry mode ?
-
-# TODO : Add a mode where file/folder creation/last update is used if no git repo ?
-
+# TODO : Detect python & os versions. Some package versions might not be available for certain os or python versions
+# TODO : Add more guesses based on other dates :
+#           - When the project was first created
+#           - Last commit (That wasn't on an .md file)
+# TODO : Poetry support ?
 # TODO : Add jupyter notebook support
-# TODO : Hide logging argument
-# TODO : Add switch to keep unused imports
-
-# FIXME : Some unused imports might be important (Pillow for example)
 
 EXTRACT_DATE_REGEX = re.compile(r'date\s-\s(\d+)')
 LETTER_REGEX = re.compile(r'[a-zA-Z]')
@@ -291,9 +284,3 @@ if __name__ == "__main__":
 
         with open(args.write, 'w') as f:
             f.write(new_requirements_txt)
-        # TODO : Write to args.write
-
-
-        
-
-
