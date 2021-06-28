@@ -63,8 +63,13 @@ def get_mapping_files_from_pipreqs(tmp_path="/tmp/.py-req-guesser"):
         mapping_url = "https://raw.githubusercontent.com/bndr/pipreqs/90102acdbb23c09574d27df8bd1f568d34e0cfd3/pipreqs/mapping"
         stdlib_url = "https://raw.githubusercontent.com/bndr/pipreqs/90102acdbb23c09574d27df8bd1f568d34e0cfd3/pipreqs/stdlib"
 
-        urlretrieve(mapping_url, mapping_filepath)
-        urlretrieve(stdlib_url, stdlib_filepath)
+        try:
+            urlretrieve(mapping_url, mapping_filepath)
+            urlretrieve(stdlib_url, stdlib_filepath)
+        except:
+            print("[ERROR] Internet access is required to fetch mapping files from https://github.com/bndr/pipreqs")
+            exit(1)
+        
 
     from_import_to_package_mapping = {}
     from_package_to_import_mapping = {}
