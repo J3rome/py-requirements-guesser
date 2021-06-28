@@ -11,7 +11,7 @@ def user_response_multi_choices(message, choices):
 
 
     nb_choices = len(choices)
-    resp = input(f'Choose option [1-{nb_choices}]\n')
+    resp = input(f'Choose option [1-{nb_choices}] : ')
 
     if not resp.isdigit() or int(resp) not in range(1,nb_choices+1):
         print("")
@@ -21,7 +21,7 @@ def user_response_multi_choices(message, choices):
 
 
 def user_response_yes_no(message):
-    resp = input(message + ' [Y/n]\n').lower()
+    resp = input(message + ' [Y/n] : ').lower()
 
     if resp not in ['y', 'n']:
         print("")
