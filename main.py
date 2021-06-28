@@ -29,6 +29,7 @@ LETTER_REGEX = re.compile(r'[a-zA-Z]')
 
 parser = argparse.ArgumentParser("Python Requirements Version Guesser")
 parser.add_argument('--git_repo_path', type=str, default=None, required=False)  # TODO : CHDIR in this directory if provided
+parser.add_argument('--write', type=str, default=None, required=False, nargs='?', const='')
 
 
 def get_pypi_history(package_name, ignore_release_candidat=True):
@@ -144,6 +145,8 @@ def get_date_when_package_committed(package_name, via_requirements=False, latest
 def guess_package_versions(package_list, from_import_to_package_mapping, from_package_to_import_mapping, packages_in_requirements, keep_unused_packages=False):
     packages = []
     for package_name, version in all_packages.items():
+        print("\n" + "-"*40)
+        print(f"PACKAGE : {package_name}")
         if version is None:
             # Reset variables
             choice = None
@@ -160,18 +163,18 @@ def guess_package_versions(package_list, from_import_to_package_mapping, from_pa
             available_versions = get_pypi_history(pypi_package_name, ignore_release_candidat=True)
 
             if available_versions is None:
-                print(f"[INFO] Couldn't find Pypi releases for package '{package_name}'")
+                print(f"    [INFO] Couldn't find Pypi releases for package '{package_name}'")
                 continue
 
             # Retrieve candidate version based on the first time the package was imported in *.py
             date_added_via_import = get_date_when_package_committed(import_name, via_requirements=False)
             if date_added_via_import is None:
-                print(f"[INFO] Package '{package_name}' is defined in requirements.txt but not used (Or committed), ", end="")
+                print(f"    [INFO] Package '{package_name}' is defined in requirements.txt but not used (Or committed), ")
                 if keep_unused_packages:
-                    print("\n       will use the requirements version since --keep_unused_packages set")
+                    print("           will use the requirements version since --keep_unused_packages set")
                     choice = 2
                 else:
-                    print("ignoring")
+                    print(f"[INFO] Ignoring package '{package_name}' (Use --keep_unused_packages if you want to keep it)")
                     continue
             else:
                 date_added_via_import_str = date_added_via_import.strftime("%Y-%m-%d")
@@ -184,7 +187,7 @@ def guess_package_versions(package_list, from_import_to_package_mapping, from_pa
                     req_version = find_version_at_date(available_versions, date_added_via_req)
                     date_added_via_req_str = date_added_via_req.strftime("%Y-%m-%d")
                 else:
-                    print(f"[INFO] Package '{package_name}' was not in requirements.txt, using date of first import (Version {import_version} / {date_added_via_import_str})")
+                    print(f"    [INFO] Package '{package_name}' was not in requirements.txt, using date of first import (Version {import_version} / {date_added_via_import_str})")
                     choice = 1
 
                 if choice is None:
@@ -198,7 +201,7 @@ def guess_package_versions(package_list, from_import_to_package_mapping, from_pa
                         # Both requirements.txt and first import resolve to the same version
                         choice = 1
             else:
-                print(f"[INFO] Package '{package_name}' was not found in requirements.txt, using date of first import (Version {import_version} / {date_added_via_import_str})")
+                print(f"    [INFO] Package '{package_name}' was not found in requirements.txt, using date of first import (Version {import_version} / {date_added_via_import_str})")
                 choice = 1
 
             if choice == 2:
@@ -213,7 +216,7 @@ def guess_package_versions(package_list, from_import_to_package_mapping, from_pa
                 continue
 
         else:
-            print(f"[INFO] Package '{package_name}' version is specified in requirements.txt ({version})")
+            print(f"[INFO] Package '{package_name}' version is specified in requirements.txt (Version {version})")
 
         packages.append((package_name, version))
 
@@ -225,7 +228,11 @@ if __name__ == "__main__":
     print("Python requirements guesser")
     print("="*60)
 
-    print("\nFollow the steps to guess package versions based on when they were added to git\n")
+    print("\nFollow the steps to guess package versions based on when they were added to git")
+
+    # TODO : Detect that CWD is a git repo
+
+    args = parser.parse_args()
 
     # Retrive mapping files from https://github.com/bndr/pipreqs
     stdlib_list, from_import_to_package_mapping, from_package_to_import_mapping = get_mapping_files_from_pipreqs()
@@ -253,9 +260,28 @@ if __name__ == "__main__":
     # Interactive guessing of packages versions
     packages = guess_package_versions(all_packages, from_import_to_package_mapping, from_package_to_import_mapping, packages_in_requirements)
 
-    print("")
-    # TODO : Write to requirements.txt
+    new_requirements_txt = ""
     for package_name, version in sorted(packages, key=lambda x:x[0]):
-        print(f"{package_name}=={version}")
+        new_requirements_txt += f"{package_name}=={version}\n"
+
+    print("\n" + "="*60)
+    print("Requirements.txt :")
+    print(new_requirements_txt)
+    if args.write is None:
+        print("Use the --write {path} parameter to write the new requirements file")
+    else:
+        if len(args.write) == 0:
+            args.write = "requirements.txt"
+
+        print(f"Writing requirements to file {args.write}")
+
+        if os.path.exist(args.write) and \
+            not user_response_yes_no(f"File {args.write} already exist, are you sure you want to overwrite it ?"):
+                exit(0)
+
+        # TODO : Write to args.write
+
+
+        
 
 
