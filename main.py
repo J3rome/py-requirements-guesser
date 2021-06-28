@@ -38,13 +38,12 @@ def get_pypi_history(package_name, ignore_release_candidat=True):
     """
     try:
         resp = urlopen(f"https://pypi.org/pypi/{package_name}/json")
-    except:
-        print("[ERROR] Internet access is required to fetch package history from Pypi")
-        exit(1)
-
-    if resp.code != 200:
-        print(f"[INFO] Couldn't find package '{package_name} on Pypi. Ignoring")
-        return None
+    except Exception as e:
+        if hasattr(e, 'getcode') and e.getcode() == 404:
+            return None
+        else:
+            print("[ERROR] Internet access is required to fetch package history from Pypi")
+            exit(1)
 
     resp = json.loads(resp.read())
 
