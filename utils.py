@@ -109,8 +109,40 @@ def load_packages_from_requirements(filepath):
     return packages
 
 
-def get_python_filename_at_root():
-    return [f[:-3] for f in os.listdir('.') if os.path.isfile(f) and f.endswith('.py')]
+def get_local_modules(print_modules=False, force_guess=None):
+    """
+    Gather list of the local python modules so we don't query pypi for those modules
+    Lets say we have the following file structure :
+        /project
+            - main.py
+            /utils
+                - common.py
+    common.py will be imported in main.py using 'from utils import common'
+    We therefore need to include the folder 'utils' in our exclusion list
+    """
+    if force_guess is None:
+        force_guess = set()
+
+    file_paths = subprocess.check_output('find . -name "*.py" -printf "%P\\n"', shell=True).decode().strip().split("\n")
+
+    modules = set()
+
+    for file_path in file_paths:
+        module = file_path.split('/')[0]
+        if '.py' in module:
+            module = module[:-3]
+
+        if module not in force_guess:
+            modules.add(module)
+
+    if print_modules:
+        print("\nWe detected the following local project modules :")
+        for module in modules:
+            print("    " + module)
+        print("We won't attempt to guess version for these packages (local files)")
+        print("In case of conflict, this can be overriden using --force_guess {package1},{package2},...")
+
+    return modules
 
 
 def get_date_last_modified_python_file():

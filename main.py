@@ -7,7 +7,7 @@ from datetime import datetime
 from urllib.request import urlopen
 
 from utils import load_packages_from_requirements, get_mapping_files_from_pipreqs, user_response_multi_choices
-from utils import get_date_last_modified_python_file, get_python_filename_at_root, validate_cwd_is_git_repo
+from utils import get_date_last_modified_python_file, get_local_modules, validate_cwd_is_git_repo
 
 # TODO : Propose choice between date of first import or Added in requirements
 # TODO :    Other choices : When project was created, last commit (That wasnt on md file) get_date_last_modified_python_file()
@@ -24,12 +24,14 @@ from utils import get_date_last_modified_python_file, get_python_filename_at_roo
 
 # FIXME : Some unused imports might be important (Pillow for example)
 
+# LIMITATION : Might get conflicts with local imports
+
 EXTRACT_DATE_REGEX = re.compile(r'date\s-\s(\d+)')
 LETTER_REGEX = re.compile(r'[a-zA-Z]')
 
 parser = argparse.ArgumentParser("Python Requirements Version Guesser")
-parser.add_argument('--git_repo_path', type=str, default=None, required=False)  # TODO : CHDIR in this directory if provided
 parser.add_argument('--write', type=str, default=None, required=False, nargs='?', const='')
+parser.add_argument('--force_guess', type=str, default=None, required=False)
 
 
 def get_pypi_history(package_name, ignore_release_candidat=True):
@@ -230,12 +232,13 @@ if __name__ == "__main__":
     print("="*60)
     print("Python requirements guesser")
     print("="*60)
+    print(f"Guessing package versions for project '{os.getcwd()}'")
 
     if not validate_cwd_is_git_repo():
         print("[ERROR] py-reqs-guesser must be runned inside a git repository")
         exit(1)
 
-    print("\nFollow the steps to guess package versions based on when they were added to git")
+    print("Follow the steps to guess package versions based on when they were added to git.")
 
     args = parser.parse_args()
 
@@ -243,7 +246,10 @@ if __name__ == "__main__":
     stdlib_list, from_import_to_package_mapping, from_package_to_import_mapping = get_mapping_files_from_pipreqs()
 
     # Get local packages
-    local_packages = get_python_filename_at_root()
+    if args.force_guess:
+        args.force_guess = set(args.force_guess.strip().split(","))
+
+    local_packages = get_local_modules(print_modules=True, force_guess=args.force_guess)
 
     # Remove local_packages from the list of imports
     stdlib_list.update(local_packages)
@@ -269,7 +275,7 @@ if __name__ == "__main__":
     for package_name, version in sorted(packages, key=lambda x:x[0]):
         new_requirements_txt += f"{package_name}=={version}\n"
 
-    print("\n" + "="*60)
+    print("\n" + "="*60 + "\n")
     print("Requirements.txt :")
     print(new_requirements_txt)
     if args.write is None:
