@@ -122,6 +122,16 @@ def get_date_last_modified_python_file():
         return datetime.fromtimestamp(int(timestamp))
 
 
+def validate_cwd_is_git_repo():
+    try:
+        subprocess.check_output("git rev-parse --is-inside-work-tree 2>/dev/null", shell=True)
+    except:
+        # git rev-parse return non-zero exit code if not in repo
+        return False
+
+    return True
+
+
 def detect_os():
     pass
 

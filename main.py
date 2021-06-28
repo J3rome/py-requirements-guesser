@@ -7,7 +7,7 @@ from datetime import datetime
 from urllib.request import urlopen
 
 from utils import load_packages_from_requirements, get_mapping_files_from_pipreqs, user_response_multi_choices
-from utils import get_date_last_modified_python_file, get_python_filename_at_root
+from utils import get_date_last_modified_python_file, get_python_filename_at_root, validate_cwd_is_git_repo
 
 # TODO : Propose choice between date of first import or Added in requirements
 # TODO :    Other choices : When project was created, last commit (That wasnt on md file) get_date_last_modified_python_file()
@@ -166,7 +166,7 @@ def guess_package_versions(package_list, from_import_to_package_mapping, from_pa
             available_versions = get_pypi_history(pypi_package_name, ignore_release_candidat=True)
 
             if available_versions is None:
-                print(f"    [INFO] Couldn't find Pypi releases for package '{package_name}'")
+                print(f"[INFO] Couldn't find Pypi releases for package '{package_name}', ignoring")
                 continue
 
             # Retrieve candidate version based on the first time the package was imported in *.py
@@ -231,9 +231,11 @@ if __name__ == "__main__":
     print("Python requirements guesser")
     print("="*60)
 
-    print("\nFollow the steps to guess package versions based on when they were added to git")
+    if not validate_cwd_is_git_repo():
+        print("[ERROR] py-reqs-guesser must be runned inside a git repository")
+        exit(1)
 
-    # TODO : Detect that CWD is a git repo
+    print("\nFollow the steps to guess package versions based on when they were added to git")
 
     args = parser.parse_args()
 
