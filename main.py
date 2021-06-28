@@ -2,9 +2,9 @@ import re
 import os
 import argparse
 import subprocess
+import json
 from datetime import datetime
-
-import requests
+from urllib.request import urlopen
 
 from utils import load_packages_from_requirements, get_mapping_files_from_pipreqs, user_response_multi_choices
 from utils import get_date_last_modified_python_file, get_python_filename_at_root
@@ -36,13 +36,17 @@ def get_pypi_history(package_name, ignore_release_candidat=True):
     """
     Retrieve version release dates via Pypi JSON api
     """
-    resp = requests.get(f"https://pypi.org/pypi/{package_name}/json")
+    try:
+        resp = urlopen(f"https://pypi.org/pypi/{package_name}/json")
+    except:
+        print("[ERROR] Internet access is required to fetch package history from Pypi")
+        exit(1)
 
-    if resp.status_code != 200:
+    if resp.code != 200:
         print(f"[INFO] Couldn't find package '{package_name} on Pypi. Ignoring")
         return None
 
-    resp = resp.json()
+    resp = json.loads(resp.read())
 
     versions = []
     for version, release_info_per_os in resp['releases'].items():
