@@ -24,14 +24,13 @@ from utils import get_date_last_modified_python_file, get_local_modules, validat
 
 # FIXME : Some unused imports might be important (Pillow for example)
 
-# LIMITATION : Might get conflicts with local imports
-
 EXTRACT_DATE_REGEX = re.compile(r'date\s-\s(\d+)')
 LETTER_REGEX = re.compile(r'[a-zA-Z]')
 
 parser = argparse.ArgumentParser("Python Requirements Version Guesser")
 parser.add_argument('--write', type=str, default=None, required=False, nargs='?', const='')
 parser.add_argument('--force_guess', type=str, default=None, required=False)
+parser.add_argument('--keep_unused_packages', action='store_true', required=False)
 
 
 def get_pypi_history(package_name, ignore_release_candidat=True):
@@ -269,7 +268,7 @@ if __name__ == "__main__":
         all_packages[extra_package] = None
 
     # Interactive guessing of packages versions
-    packages = guess_package_versions(all_packages, from_import_to_package_mapping, from_package_to_import_mapping, packages_in_requirements)
+    packages = guess_package_versions(all_packages, from_import_to_package_mapping, from_package_to_import_mapping, packages_in_requirements, keep_unused_packages=args.keep_unused_packages)
 
     new_requirements_txt = ""
     for package_name, version in sorted(packages, key=lambda x:x[0]):
