@@ -137,6 +137,7 @@ def find_version_at_date(available_versions, date):
 def get_mapping_files_from_pipreqs(tmp_path="/tmp/.py-reqs-guesser"):
     """
     Retrieve 'import -> package' name mapping and standard lib module list
+    The mapping key is lowercase so that we can match case insensitive
     These files come from https://github.com/bndr/pipreqs
     """
 
@@ -181,8 +182,8 @@ def get_mapping_files_from_pipreqs(tmp_path="/tmp/.py-reqs-guesser"):
         for line in f.readlines():
             import_name, package_name = line.strip().split(":")
 
-            from_import_to_package_mapping[import_name] = package_name
-            from_package_to_import_mapping[package_name] = import_name
+            from_import_to_package_mapping[import_name.lower()] = package_name
+            from_package_to_import_mapping[package_name.lower()] = import_name
 
     with open(stdlib_filepath, 'r') as f:
         stdlib = set([l.strip() for l in f.readlines()])
@@ -196,12 +197,15 @@ def get_packages_from_requirements(filepath):
     """
     # TODO : Handle multiple version conditions
     # TODO : Handle greater than (>). If version contains >, should take the greatest available version at that date.
+    packages = {}
+
+    if not os.path.exists(filepath):
+        return packages
+
     with open(filepath, 'r') as f:
         lines = f.readlines()
 
     split_reg = re.compile(r'==|<=|>=|<|>')
-
-    packages = {}
 
     for line in lines:
         splitted = re.split(split_reg, line.strip())
@@ -210,7 +214,7 @@ def get_packages_from_requirements(filepath):
         else:
             version = None
 
-        packages[splitted[0].lower()] = version
+        packages[splitted[0]] = version
 
     return packages
 
