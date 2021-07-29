@@ -28,7 +28,7 @@ py-requirements-guesser --write {requirements.txt path}
 ```
 You will be prompted by a serie of choice to orient the guessing process.
 
-[![Python Requirements Guesser](https://asciinema.org/a/NpDiEhjzXf8IXm3oQdqbYm92F.svg)](https://asciinema.org/a/NpDiEhjzXf8IXm3oQdqbYm92F)
+![Python Requirements Guesser](py-requirements-guesser.gif)
 
 ## Installation
 This package doesn't have any dependencies.
