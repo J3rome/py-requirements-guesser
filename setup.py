@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="py-requirements-guesser",        # This is the name of the package
-    version="0.0.1",                        # The initial release version
+    version="0.1.0",                        # The initial release version
     author="Jerome Abdelnour",                     # Full name of the author
     description="Guess requirements.txt versions based on Git history",
     long_description=long_description,      # Long description read from the the readme file
